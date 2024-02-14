@@ -4,8 +4,13 @@
 #include <GL/glew.h>
 #include <GLES3/gl3.h>
 
-#include <emscripten/emscripten.h>
+#include <emscripten.h>
+#include <emscripten/html5.h>
 #include <emscripten/threading.h>
+#include <pthread.h>
+#include <emscripten/html5_webgpu.h>
+
+pthread_t renderingThreadId = 0, render_th_id = 0;
 
 GLuint program;
 GLuint vao;
@@ -104,8 +109,27 @@ void render() {
     glUseProgram(0);
 }
 
+void processPendingJobs()
+{
+    printf("\n\nInside worker thread.\n\n");
+}
+
+void *renderingThreadEntry(void *arg)
+{
+    render_th_id = pthread_self();
+    printf("\n\nInside renderingThreadEntry().\n\n");
+    emscripten_set_main_loop(processPendingJobs, 60, 1);
+    return nullptr;
+}
+
 int main() 
 {
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    emscripten_pthread_attr_settransferredcanvases(&attr, "#webgpu_canvas2");
+    pthread_create(&renderingThreadId, &attr, renderingThreadEntry, (void *)nullptr);
+
+
     init();
     emscripten_set_main_loop(render, 0, 1);
 
