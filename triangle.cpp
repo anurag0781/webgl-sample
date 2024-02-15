@@ -9,10 +9,7 @@
 #include <emscripten/threading.h>
 #include <pthread.h>
 #include <emscripten/html5_webgpu.h>
-<<<<<<< Updated upstream
-=======
 #include <string>
->>>>>>> Stashed changes
 
 pthread_t renderingThreadId = 0, render_th_id = 0;
 
@@ -115,9 +112,6 @@ void render() {
 
 void processPendingJobs()
 {
-<<<<<<< Updated upstream
-    printf("\n\nInside worker thread.\n\n");
-=======
     EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ctx = emscripten_webgl_get_current_context();
     // printf("\n\nInside worker thread.\n\n");
     EM_ASM({
@@ -146,15 +140,12 @@ void processPendingJobs()
 
     
 
->>>>>>> Stashed changes
 }
 
 void *renderingThreadEntry(void *arg)
 {
     render_th_id = pthread_self();
     printf("\n\nInside renderingThreadEntry().\n\n");
-<<<<<<< Updated upstream
-=======
     EM_ASM({
         // console.log("Inside processPendingJobs().1");
         // const offscreen = new OffscreenCanvas(256, 256);
@@ -188,7 +179,6 @@ void *renderingThreadEntry(void *arg)
     }
     emscripten_webgl_make_context_current(ctx);
 
->>>>>>> Stashed changes
     emscripten_set_main_loop(processPendingJobs, 60, 1);
     return nullptr;
 }
@@ -197,16 +187,9 @@ int main()
 {
     pthread_attr_t attr;
     pthread_attr_init(&attr);
-<<<<<<< Updated upstream
-    emscripten_pthread_attr_settransferredcanvases(&attr, "#webgpu_canvas2");
-    pthread_create(&renderingThreadId, &attr, renderingThreadEntry, (void *)nullptr);
-
-
-=======
     emscripten_pthread_attr_settransferredcanvases(&attr, "#webgl_canvas,#webgpu_canvas");
     pthread_create(&renderingThreadId, &attr, renderingThreadEntry, (void *)nullptr);
 
->>>>>>> Stashed changes
     init();
     emscripten_set_main_loop(render, 0, 1);
 
