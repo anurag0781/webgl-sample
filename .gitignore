@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+a.out.js
+a.out.worker.js
+a.out.wasm
+
