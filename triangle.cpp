@@ -31,7 +31,7 @@ void init() {
     attrs.antialias = 1;
     attrs.majorVersion = 2;
     attrs.minorVersion = 0;
-    _context = emscripten_webgl_create_context("#myCanvas", &attrs);
+    _context = emscripten_webgl_create_context("#mycanvas", &attrs);
     if (_context > 0)
     {
         printf("\n\nCreation of context succeeded!!!\n\n");
