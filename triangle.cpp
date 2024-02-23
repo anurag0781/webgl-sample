@@ -11,6 +11,7 @@
 #include <emscripten/html5_webgpu.h>
 #include <string>
 #include <iostream>
+#include <vector>
 
 pthread_t renderingThreadId = 0, render_th_id = 0;
 
