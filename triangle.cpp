@@ -12,6 +12,7 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <thread>
 
 pthread_t renderingThreadId = 0, render_th_id = 0;
 
@@ -118,11 +119,19 @@ void drawTextureOnScreen(GLuint srcTexture)
     glBindVertexArray(vertexBuffers[0]);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
+
+    // glDeleteTextures(1, &srcTexture);
 }
 
 
 GLuint drawLine(bool shouldDrawOnTexture)
 {
+    // Create VAO and VBO
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
     // Setup to drawline with width
     const float angle = M_PI_4;  // Angle in degrees
     const float length = 0.8f;  // Length of the line
@@ -187,6 +196,9 @@ GLuint drawLine(bool shouldDrawOnTexture)
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
+
+    // Delete framebuffer and texture
+    // glDeleteFramebuffers(1, &framebuffer);
 
     return textureId;
 }
@@ -327,15 +339,22 @@ GLuint drawCircleOnTextureWithUV()
     return textureId;
 }
 
+void callback(void* arg) {
+    printf("\n Inside emscripten_set_interval(). \n");
+    GLuint textureId = drawLine(true);
+    drawTextureOnScreen(textureId);
+    
+ }
+
 void init() {
     EMSCRIPTEN_WEBGL_CONTEXT_HANDLE _context;
     EmscriptenWebGLContextAttributes attrs;
     emscripten_webgl_init_context_attributes(&attrs);
-    attrs.enableExtensionsByDefault = 1;
-    // attrs.explicitSwapControl = true;
+    // attrs.enableExtensionsByDefault = 1;
+    // attrs.explicitSwapControl = EM_TRUE;
     attrs.powerPreference = EM_WEBGL_POWER_PREFERENCE_HIGH_PERFORMANCE;
     attrs.proxyContextToMainThread = EMSCRIPTEN_WEBGL_CONTEXT_PROXY_DISALLOW;
-    // attrs.renderViaOffscreenBackBuffer = true;
+    // attrs.renderViaOffscreenBackBuffer = EM_TRUE;
     attrs.depth = 1;
     attrs.stencil = 1;
     attrs.antialias = 1;
@@ -354,7 +373,7 @@ void init() {
     emscripten_webgl_make_context_current(_context);
 
     // Clear the screen to yellow
-    glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
+    // glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
 
     // Create shaders
     // const char* vertexShaderSource = "#version 300 es\n"
@@ -402,19 +421,29 @@ void init() {
     glAttachShader(program, fragmentShader);
     glLinkProgram(program);
 
-    // Create VAO and VBO
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    for (int i =0; i<10000 ; i++)
+    {
+        printf("\n Invoked after sleep [%d]. \n", i);
+        bool shouldDrawOnTexture = false;
+        // GLuint textureId = drawCircle(shouldDrawOnTexture);
+        GLuint textureId = drawLine(shouldDrawOnTexture);
 
-    bool shouldDrawOnTexture = true;
-    GLuint textureId = drawCircle(shouldDrawOnTexture);
-    // GLuint textureId = drawLine(shouldDrawOnTexture);
+        if (shouldDrawOnTexture)
+            drawTextureOnScreen(textureId);
 
-    if (shouldDrawOnTexture)
-        drawTextureOnScreen(textureId);
+
+        // emscripten_webgl_commit_frame();
+        glFinish();
+        // glFlush();
+        // break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
+
+
+    // emscripten_set_interval(callback, 5000, nullptr);
 }
+
+
 
 void render() {
     // glClear(GL_COLOR_BUFFER_BIT);
