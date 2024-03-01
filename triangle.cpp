@@ -14,7 +14,8 @@
 #include <vector>
 #include <thread>
 
-pthread_t renderingThreadId = 0, render_th_id = 0;
+pthread_t renderingThreadId = 0, intermediate_th_id = 0;
+
 
 GLuint program;
 GLuint vao;
@@ -372,7 +373,7 @@ void init() {
 
     emscripten_webgl_make_context_current(_context);
 
-    // Clear the screen to yellow
+        // Clear the screen to yellow
     // glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
 
     // Create shaders
@@ -391,7 +392,7 @@ void init() {
     //                                 "void main() {\n"
     //                                 "    gl_Position = vec4(xy, 0.0, 1.0);\n"
     //                                 "    v_texturePos = uv;\n"
-    //                                 "}";
+    //                                 "}";                             
 
     const char *vertexShaderSource =
                                     "#version 300 es\n"
@@ -421,29 +422,17 @@ void init() {
     glAttachShader(program, fragmentShader);
     glLinkProgram(program);
 
-    for (int i =0; i<10000 ; i++)
-    {
-        printf("\n Invoked after sleep [%d]. \n", i);
-        bool shouldDrawOnTexture = false;
-        // GLuint textureId = drawCircle(shouldDrawOnTexture);
-        GLuint textureId = drawLine(shouldDrawOnTexture);
+    bool shouldDrawOnTexture = false;
+    // GLuint textureId = drawCircle(shouldDrawOnTexture);
+    GLuint textureId = drawLine(shouldDrawOnTexture);
 
-        if (shouldDrawOnTexture)
-            drawTextureOnScreen(textureId);
-
-
-        // emscripten_webgl_commit_frame();
-        glFinish();
-        // glFlush();
-        // break;
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
-
-
+    if (shouldDrawOnTexture)
+        drawTextureOnScreen(textureId);
     // emscripten_set_interval(callback, 5000, nullptr);
+
+
+    // pthread_create(&intermediate_th_id, nullptr, intermediateThreadEntry, (void *)nullptr);
 }
-
-
 
 void render() {
     // glClear(GL_COLOR_BUFFER_BIT);
@@ -459,34 +448,25 @@ void render() {
 
 void processPendingJobs()
 {
-    // EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ctx = emscripten_webgl_get_current_context();
-    // // printf("\n\nInside worker thread.\n\n");
-    // EM_ASM({
-    //     // var gl = Emval.toValue($0);
-    //     // console.log(gl);
-    //     var gl = Module.GL.currentContext.GLctx;
-    //     // var gl = Module.GL.getContext($0).GLctx;
-    //     // var canvas = Module.findCanvasEventTarget('#webgl_canvas');
-    //     // var gl = canvas.getContext('webgl');
-    //     gl.clearColor(0.0, 0.0, 1.0, 1.0);
-    //     gl.clear(gl.COLOR_BUFFER_BIT);
+    // printf("\n processPendingJobs \n");
+}
 
-    //     // var webgpuContext = Module.findCanvasEventTarget('#webgpu_canvas').offscreenCanvas.getContext('webgl');
-    //     // webgpuContext.clearColor(0.0, 1.0, 0.0, 1.0);
-    //     // webgpuContext.clear(gl.COLOR_BUFFER_BIT);
+// static void run(int32_t ptr)
+static void intermediateThreadEntry(int32_t arg)
+{
+    bool shouldDrawOnTexture = false;
+    GLuint textureId = drawCircle(shouldDrawOnTexture);
 
-    //     var webgpuContext = Module.findCanvasEventTarget('#webgpu_canvas').offscreenCanvas.getContext('2d');
-    //     var width = Module.findCanvasEventTarget('#webgpu_canvas').offscreenCanvas.width;
-    //     var height = Module.findCanvasEventTarget('#webgpu_canvas').offscreenCanvas.height;
-    //     webgpuContext.fillStyle = 'red';
-    //     webgpuContext.fillRect(0, 0, width, height);
+    if (shouldDrawOnTexture)
+        drawTextureOnScreen(textureId);
+}
 
-        
-        
-    // }, ctx);
-
-    
-
+static void mainRUn(int32_t arg)
+{
+    printf("\n\nInside mainRUn().\n\n");
+    emscripten_dispatch_to_thread_async(renderingThreadId, EM_FUNC_SIG_VI,
+                                        intermediateThreadEntry, nullptr,
+                                        nullptr);
 }
 
 void *renderingThreadEntry(void *arg)
@@ -526,10 +506,14 @@ void *renderingThreadEntry(void *arg)
     // }
     // emscripten_webgl_make_context_current(ctx);
 
-    // emscripten_set_main_loop(processPendingJobs, 60, 1);
     init();
+    emscripten_set_main_loop(processPendingJobs, -1, 0);
+    emscripten_async_run_in_main_runtime_thread(EM_FUNC_SIG_VI,
+                                        mainRUn, nullptr,
+                                        nullptr);
     return nullptr;
 }
+
 
 int main() 
 {
